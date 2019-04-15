@@ -3,7 +3,10 @@ package dbr
 import (
 	"context"
 	"database/sql"
+	"reflect"
 	"strconv"
+
+	"github.com/fatih/structs"
 )
 
 // UpdateStmt builds `UPDATE ...`.
@@ -19,6 +22,8 @@ type UpdateStmt struct {
 	WhereCond    []Builder
 	ReturnColumn []string
 	LimitCount   int64
+
+	Column []string
 }
 
 type UpdateBuilder = UpdateStmt
@@ -188,4 +193,45 @@ func (b *UpdateStmt) LoadContext(ctx context.Context, value interface{}) error {
 
 func (b *UpdateStmt) Load(value interface{}) error {
 	return b.LoadContext(context.Background(), value)
+}
+
+// Columns adds columns
+func (b *UpdateStmt) Columns(column ...string) *UpdateStmt {
+	b.Column = column
+	return b
+}
+
+// Record adds a tuple for columns from a struct
+func (b *UpdateStmt) Record(structValue interface{}) *UpdateStmt {
+
+	v := reflect.Indirect(reflect.ValueOf(structValue))
+
+	t := reflect.TypeOf(structValue)
+
+	if v.Kind() == reflect.Struct {
+
+		tagMap := make(map[string]string)
+		for i := 0; i < t.NumField(); i++ {
+			// Get the field
+			field := t.Field(i)
+
+			// Get the field tag value
+			tag := t.Field(i).Tag.Get("db")
+
+			tagMap[field.Name] = tag
+		}
+
+		m := structs.Map(v.Interface())
+
+		// fmt.Printf("DATA mu=%#v\n", m)
+
+		for _, col := range b.Column {
+			if val, ok := m[col]; ok {
+				b.Set(tagMap[col], val)
+			}
+		}
+
+	}
+
+	return b
 }
