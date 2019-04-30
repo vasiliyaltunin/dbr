@@ -138,6 +138,8 @@ func exec(ctx context.Context, runner runner, log EventReceiver, builder Builder
 		defer traceImpl.SpanFinish(ctx)
 	}
 
+	fmt.Println(query)
+
 	result, err := runner.ExecContext(ctx, query, value...)
 	if err != nil {
 		if hasTracingImpl {
@@ -167,6 +169,7 @@ func queryRows(ctx context.Context, runner runner, log EventReceiver, builder Bu
 			"args": fmt.Sprint(value),
 		})
 	}
+	fmt.Println("SQL query=" + query)
 
 	startTime := time.Now()
 	defer func() {
